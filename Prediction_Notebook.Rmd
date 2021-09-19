@@ -9,13 +9,111 @@ library(data.table)
 library(ggplot2)
 library(ggthemes)
 library(scales)
+library(ISLR)
+library(treemapify)
 ```
 
 ```{r}
-dd <- fread("./Test-Data.csv")
+dd <- fread("./Training-Data.csv")
 head(dd,n=10)
 ```
 
+---
+EDA: Income
+---
+
+
 ```{r}
+print(paste0("Minimum salary: ",min(dd$Income)))
+print(paste0("Maximum salary: ",max(dd$Income)))
+```
+
+```{r}
+salary_distribution <- ggplot(dd, aes(dd$Income, fill=..count..))+
+  geom_histogram(binwidth=1000000) + 
+  labs(x="Income", y="Number") +
+  ggtitle("Frequency Distribution of Income")
+  
+salary_distribution
+```
+
+```{r}
+rented_vs_owned <- dd[, .(count = .N), by = House_Ownership]
+print(rented_vs_owned)
+```
+
+```{r}
+ggplot(rented_vs_owned, aes (x="", y = count, fill = House_Ownership)) + 
+  geom_col(position = 'stack', width = 1) +
+  geom_text(aes(label = paste0(round(count / sum(count) * 100), "%"), x = 1.3),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Blues")+
+  theme_classic() +
+  theme(plot.title = element_text(hjust=0.5),
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(fill = "House Ownership",
+       x = NULL,
+       y = NULL,
+       title = "House Ownership") + 
+  coord_polar("y")
+
+```
+```{r}
+car_ownership <- dd[, .(count = .N), by = Car_Ownership]
+print(car_ownership)
+```
+
+```{r}
+ggplot(car_ownership, aes (x="", y = count, fill = Car_Ownership)) + 
+  geom_col(position = 'stack', width = 1) +
+  geom_text(aes(label = paste0(round(count / sum(count) * 100), "%"), x = 1.3),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Blues")+
+  theme_classic() +
+  theme(plot.title = element_text(hjust=0.5),
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(fill = "Car Ownership",
+       x = NULL,
+       y = NULL,
+       title = "Car Ownership") + 
+  coord_polar("y")
+
+```
+```{r}
+marital_status <- dd[, .(count = .N), by = `Married/Single`]
+print(marital_status)
+```
+```{r}
+ggplot(marital_status, aes (x="", y = count, fill = `Married/Single`)) + 
+  geom_col(position = 'stack', width = 1) +
+  geom_text(aes(label = paste0(round(count / sum(count) * 100), "%"), x = 1.3),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Blues")+
+  theme_classic() +
+  theme(plot.title = element_text(hjust=0.5),
+        axis.line = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank()) +
+  labs(fill = "Marital Status",
+       x = NULL,
+       y = NULL,
+       title = "Marital Status") + 
+  coord_polar("y")
+
+```
+```{r}
+profession <- dd[, .(count = .N), by = `Profession`][order(-rank(count))]
+print(head(profession,n=10))
+```
+```{r}
+ggplot(data=head(profession,n=10), aes(x=reorder(Profession, count), y=count)) +
+  geom_bar(stat="identity")+
+  coord_flip()+
+  labs(title = 'Top 10 Profession') +
+  xlab("Profession")
 
 ```
