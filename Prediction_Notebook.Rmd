@@ -1,0 +1,21 @@
+---
+title: "Loan Prediction"
+output: html_notebook
+author: "Aditya Sinha"
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(ggthemes)
+library(scales)
+```
+
+```{r}
+dd <- fread("./Test-Data.csv")
+head(dd,n=10)
+```
+
+```{r}
+
+```
