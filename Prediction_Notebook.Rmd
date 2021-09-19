@@ -5,12 +5,15 @@ author: "Aditya Sinha"
 ---
 
 ```{r}
+installed.packages(c("data.table", "ggplot2", "ggthemes", "scales", "ISLR"))
+```
+
+```{r}
 library(data.table)
 library(ggplot2)
 library(ggthemes)
 library(scales)
 library(ISLR)
-library(treemapify)
 ```
 
 ```{r}
@@ -21,7 +24,6 @@ head(dd,n=10)
 ---
 EDA: Income
 ---
-
 
 ```{r}
 print(paste0("Minimum salary: ",min(dd$Income)))
@@ -36,6 +38,10 @@ salary_distribution <- ggplot(dd, aes(dd$Income, fill=..count..))+
   
 salary_distribution
 ```
+
+---
+EDA: House Ownership
+---
 
 ```{r}
 rented_vs_owned <- dd[, .(count = .N), by = House_Ownership]
@@ -60,6 +66,11 @@ ggplot(rented_vs_owned, aes (x="", y = count, fill = House_Ownership)) +
   coord_polar("y")
 
 ```
+
+---
+EDA: Car Ownership
+---
+
 ```{r}
 car_ownership <- dd[, .(count = .N), by = Car_Ownership]
 print(car_ownership)
@@ -83,10 +94,16 @@ ggplot(car_ownership, aes (x="", y = count, fill = Car_Ownership)) +
   coord_polar("y")
 
 ```
+
+---
+EDA: Marital Status
+---
+
 ```{r}
 marital_status <- dd[, .(count = .N), by = `Married/Single`]
 print(marital_status)
 ```
+
 ```{r}
 ggplot(marital_status, aes (x="", y = count, fill = `Married/Single`)) + 
   geom_col(position = 'stack', width = 1) +
@@ -105,6 +122,11 @@ ggplot(marital_status, aes (x="", y = count, fill = `Married/Single`)) +
   coord_polar("y")
 
 ```
+
+---
+EDA: Profession
+---
+
 ```{r}
 profession <- dd[, .(count = .N), by = `Profession`][order(-rank(count))]
 print(head(profession,n=10))
