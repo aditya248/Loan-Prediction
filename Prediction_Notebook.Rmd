@@ -1,7 +1,7 @@
 ---
 title: "Loan Prediction"
-output: html_notebook
-author: "Aditya Sinha"
+author: "Aditya Sinha, Alex von Schwerdtner, Fusu Luo, Jennifer Horita , Weijia Suo"
+output: html_notebook: default
 ---
 
 ```{r}
@@ -37,6 +37,20 @@ salary_distribution <- ggplot(dd, aes(dd$Income, fill=..count..))+
   ggtitle("Frequency Distribution of Income")
   
 salary_distribution
+```
+
+---
+EDA: Age
+---
+
+```{r}
+age_distribution <- ggplot(dd, aes(dd$Age, fill=..count..))+
+  geom_histogram(binwidth = 10,) + 
+  labs(x="Age", y="Number") +
+  ggtitle("Frequency Distribution of Age")+
+  scale_x_continuous(breaks = seq(0,250,25))
+  
+age_distribution
 ```
 
 ---
@@ -129,9 +143,16 @@ EDA: Profession
 
 ```{r}
 profession <- dd[, .(count = .N), by = `Profession`][order(-rank(count))]
-print(head(profession,n=10))
+print(nrow(profession))
 ```
 ```{r}
+
+print(paste0("Disitinct Profession:", nrow(profession)))
+
+```
+
+```{r}
+
 ggplot(data=head(profession,n=10), aes(x=reorder(Profession, count), y=count)) +
   geom_bar(stat="identity")+
   coord_flip()+
