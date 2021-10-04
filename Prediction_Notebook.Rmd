@@ -166,6 +166,15 @@ Machine learning
 ---
 
 ---
+Helper Method
+---
+
+```{r}
+mse = function(x,y) { mean((x-y)^2)}
+
+```
+
+---
 Data Cleaning
 ---
 
@@ -193,18 +202,15 @@ str(data)
 summary(data)
 ```
 
----
-Lasso Regression
----
-
 ```{r}
+
 set.seed(123)
 smp_size <- floor(0.70 * nrow(data))
 train_ind <- sample(seq_len(nrow(data)), size = smp_size)
 
 x_data <- model.matrix( ~ -1 + Income + Age +
  Experience + Marital_Status +
- House_Ownership + Car_Ownership +CURRENT_JOB_YRS + CURRENT_HOUSE_YRS, data)
+ House_Ownership + Car_Ownership + CITY + STATE + Profession + CURRENT_JOB_YRS + CURRENT_HOUSE_YRS, data)
 
 # outcome is median house value in millions
 y_data <- dd$Risk_Flag
@@ -216,37 +222,47 @@ y_test <- y_data[-train_ind]
 
 ```
 
-```{r}
-
-est <- cv.glmnet(x_train, y=y_train, alpha = 1, nfolds = 10)
-best_lambda <- est$lambda.min
-
-```
-
+---
+Lasso Regression
+---
 
 ```{r}
 
-best_model <- glmnet(x_train, y_train, alpha = 1, lambda = best_lambda)
-coef(best_model)
+lasso_model <- cv.glmnet(x_train, y=y_train, alpha = 1, nfolds = 5)
+best_lasso_lambda <- lasso_model$lambda.min
+
+
+best_model_lasso <- glmnet(x_train, y_train, alpha = 1, lambda = best_lasso_lambda)
+#coef(best_model)
+
+predictions_train_lasso <- predict(best_model_lasso, s = best_lasso_lambda, newx = x_train)
+predictions_test_lasso <- predict(best_model_lasso, s = best_lasso_lambda, newx = x_test)
+
+print(mse(predictions_test_lasso, y_test))
 
 ```
+
+---
+Ridge Regression
+---
+
+
 
 ```{r}
 
-predictions_train <- predict(best_model, s = best_lambda, newx = x_train, family = binomial)
-predicted_train_binary <- ifelse(predictions_train > 0.5, 1, 0)
+ridge_model <- cv.glmnet(x_train, y=y_train, alpha = 0, nfolds = 5)
+best_ridge_lambda <- ridge_model$lambda.min
 
-predictions_test <- predict(best_model, s = best_lambda, newx = x_test, family = binomial)
-predicted_test_binary <- ifelse(predictions_test > 0.5, 1, 0)
 
+best_model_ridge <- glmnet(x_train, y_train, alpha = 0, lambda = best_ridge_lambda)
+#coef(best_model_ridge)
+
+predictions_train_ridge <- predict(best_model_ridge, s = best_ridge_lambda, newx = x_train)
+predictions_test_ridge <- predict(best_model_ridge, s = best_ridge_lambda, newx = x_test)
+
+print(mse(predictions_test_ridge, y_test))
 
 ```
-
-
-
-
-
-
 
 
 
