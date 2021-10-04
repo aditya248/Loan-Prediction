@@ -160,3 +160,99 @@ ggplot(data=head(profession,n=10), aes(x=reorder(Profession, count), y=count)) +
   xlab("Profession")
 
 ```
+
+---
+Machine learning
+---
+
+---
+Data Cleaning
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(ggthemes)
+library(glmnet)
+library(dplyr)
+theme_set(theme_bw())
+```
+
+```{r}
+data <- dd
+
+#REMOVE unwanted ID
+data$Id <- NULL
+
+#Change col names
+colnames(data)[4] <- "Marital_Status"
+
+str(data)
+```
+```{r}
+summary(data)
+```
+
+---
+Lasso Regression
+---
+
+```{r}
+set.seed(123)
+smp_size <- floor(0.70 * nrow(data))
+train_ind <- sample(seq_len(nrow(data)), size = smp_size)
+
+x_data <- model.matrix( ~ -1 + Income + Age +
+ Experience + Marital_Status +
+ House_Ownership + Car_Ownership +CURRENT_JOB_YRS + CURRENT_HOUSE_YRS, data)
+
+# outcome is median house value in millions
+y_data <- dd$Risk_Flag
+
+x_train <- x_data[train_ind, ]
+y_train <- y_data[train_ind]
+x_test <- x_data[-train_ind, ]
+y_test <- y_data[-train_ind]
+
+```
+
+```{r}
+
+est <- cv.glmnet(x_train, y=y_train, alpha = 1, nfolds = 10)
+best_lambda <- est$lambda.min
+
+```
+
+
+```{r}
+
+best_model <- glmnet(x_train, y_train, alpha = 1, lambda = best_lambda)
+coef(best_model)
+
+```
+
+```{r}
+
+predictions_train <- predict(best_model, s = best_lambda, newx = x_train, family = binomial)
+predicted_train_binary <- ifelse(predictions_train > 0.5, 1, 0)
+
+predictions_test <- predict(best_model, s = best_lambda, newx = x_test, family = binomial)
+predicted_test_binary <- ifelse(predictions_test > 0.5, 1, 0)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
