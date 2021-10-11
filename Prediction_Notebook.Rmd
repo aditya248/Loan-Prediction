@@ -4,12 +4,27 @@ author: "Aditya Sinha, Alex von Schwerdtner, Fusu Luo, Jennifer Horita , Weijia 
 output: html_notebook
 ---
 
+
+# Executive Summary
+
+
+# Problem Definition
+
+
+# Data Source
+
+
+
+# Setup
+
+## Installing Packages
 ```{r}
 
-install.packages(c("data.table", "ggplot2", "ggthemes", "scales", "ISLR", "randomForest", "caret", "rpart.plot", "rpart", "caTools", "ROCR", "gbm"))
+install.packages(c("data.table", "ggplot2", "ggthemes", "scales", "ISLR", "randomForest", "caret", "rpart.plot", "rpart", "caTools", "ROCR", "gbm","SmartEDA"))
 
 ```
 
+## Loading Packages to Library
 ```{r}
 library(data.table)
 library(ggplot2)
@@ -25,10 +40,12 @@ library(caTools)
 library(ROCR)
 library(rpart)
 library(rpart.plot)
+library(SmartEDA)
 
 theme_set(theme_bw())
 ```
 
+## Loading dataset into the environment
 ```{r}
 dd <- fread("./Training-Data.csv")
 head(dd,n=10)
@@ -39,9 +56,12 @@ head(dd,n=10)
 str(dd)
 ```
 
----
-Re-sampling
----
+```{r}
+summary(dd)
+```
+
+
+# Re-sampling
 
 ```{r}
 
@@ -74,9 +94,19 @@ dd <- sample1
 str(dd)
 ```
 
----
-EDA: Income
----
+# Exploratory Data Analysis
+
+## General Analysis - Overview
+
+```{r}
+# Overview of the data - Type = 1
+ExpData(data=dd,type=1)
+
+# Structure of the data - Type = 2
+ExpData(data=dd,type=2, fun = c("mean", "median", "var"))
+```
+
+## EDA: Income
 
 ```{r}
 print(paste0("Minimum salary: ",min(dd$Income)))
@@ -92,9 +122,7 @@ salary_distribution <- ggplot(dd, aes(dd$Income, fill=..count..))+
 salary_distribution
 ```
 
----
-EDA: Age
----
+## EDA: Age
 
 ```{r}
 age_distribution <- ggplot(dd, aes(dd$Age, fill=..count..))+
@@ -106,9 +134,7 @@ age_distribution <- ggplot(dd, aes(dd$Age, fill=..count..))+
 age_distribution
 ```
 
----
-EDA: House Ownership
----
+## EDA: House Ownership
 
 ```{r}
 rented_vs_owned <- dd[, .(count = .N), by = House_Ownership]
@@ -134,9 +160,7 @@ ggplot(rented_vs_owned, aes (x="", y = count, fill = House_Ownership)) +
 
 ```
 
----
-EDA: Car Ownership
----
+## EDA: Car Ownership
 
 ```{r}
 car_ownership <- dd[, .(count = .N), by = Car_Ownership]
@@ -162,9 +186,7 @@ ggplot(car_ownership, aes (x="", y = count, fill = Car_Ownership)) +
 
 ```
 
----
-EDA: Marital Status
----
+## EDA: Marital Status
 
 ```{r}
 marital_status <- dd[, .(count = .N), by = `Married/Single`]
@@ -190,9 +212,7 @@ ggplot(marital_status, aes (x="", y = count, fill = `Married/Single`)) +
 
 ```
 
----
-EDA: Profession
----
+## EDA: Profession
 
 ```{r}
 profession <- dd[, .(count = .N), by = `Profession`][order(-rank(count))]
@@ -209,22 +229,31 @@ ggplot(data=head(profession,n=10), aes(x=reorder(Profession, count), y=count)) +
 
 ```
 
----
-Machine learning
----
+## EDA: Target Variable: "Risk_Flag"
 
----
-Helper Method
----
+```{r}
+#Cross tabulation with target variable
+ExpCTable(dd,Target="Risk_Flag",margin=1,clim=10,nlim=3,round=2,bin=NULL,per=F)
+```
+```{r}
+#Distributions of Numerical variables
+plot1 <- ExpNumViz(dd,target="Risk_Flag",type=1,nlim=5,fname=NULL,col=c("darkgreen","springgreen3","springgreen1"),Page=c(2,2),sample=5)
+plot1[[1]]
+```
+
+```{r}
+#Distributions of categorical variables
+plot2 <- ExpCatViz(dd,target="Risk_Flag",fname=NULL,clim=15,col=c("slateblue4","slateblue1"),margin=2,Page = c(1,1),sample=5)
+plot2[[1]]
+```
+
+## Helper Method
 
 ```{r}
 mse = function(x,y) { mean((x-y)^2)}
 ```
 
----
-Data Cleaning
----
-
+# Data Cleaning
 
 ```{r}
 
@@ -281,9 +310,9 @@ prop.table(table(y_test))
 
 ```
 
----
-Linear Regression
----
+# Supervised-Machine Learning Models
+
+## Linear Regression
 
 ```{r}
 
@@ -298,9 +327,7 @@ print(mse_test_lm1)
 
 ```
 
----
-Ridge Regression
----
+## Ridge Regression
 
 ```{r}
 
@@ -320,9 +347,7 @@ print(mse_test_ridge)
 
 ```
 
----
-Lasso Regression
----
+## Lasso Regression
 
 ```{r}
 
@@ -342,13 +367,11 @@ print(mse_test_lasso)
 
 ```
 
----
-Logistic regression
----
+## Logistic regression
 
 ```{r}
 
-log_model <- glm(y_train ~ ., data=x_train_df)
+log_model <- glm(y_train ~ ., data=x_train_df, family = "binomial")
 
 predictions_test_log_df <- predict(log_model, x_test_df, type = "response")
 predictions_test_log <- as.matrix(predictions_test_log_df)
@@ -360,9 +383,7 @@ print(mse_test_log)
 
 ```
 
----
-Decision Tree
----
+## Decision Tree
 
 ```{r}
 # machine learning - decision tree
@@ -380,9 +401,8 @@ rpart.plot(tree_model, type = 1)
 
 ```
 
----
-Random Forest
----
+## Random Forest
+
 ```{r}
 
 # Run randomForest model
@@ -395,9 +415,7 @@ print(mse_test_forest)
 
 ```
 
----
-Generalized Boosted Regression 
----
+## Generalized Boosted Regression 
 
 ```{r}
 
@@ -416,7 +434,7 @@ print(mse_test_gbmtress)
 
 ```
 
-
+# Conclusion
 
 
 
