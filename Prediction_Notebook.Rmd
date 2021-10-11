@@ -6,7 +6,7 @@ output: html_notebook
 
 ```{r}
 
-install.packages(c("data.table", "ggplot2", "ggthemes", "scales", "ISLR", "randomForest", "caret", "rpart.plot", "rpart", "caTools", "ROCR"))
+install.packages(c("data.table", "ggplot2", "ggthemes", "scales", "ISLR", "randomForest", "caret", "rpart.plot", "rpart", "caTools", "ROCR", "gbm"))
 
 ```
 
@@ -16,11 +16,62 @@ library(ggplot2)
 library(ggthemes)
 library(scales)
 library(ISLR)
+library(glmnet)
+library(dplyr)
+library(randomForest)
+library(caret)
+library(gbm)
+library(caTools)
+library(ROCR)
+library(rpart)
+library(rpart.plot)
+
+theme_set(theme_bw())
 ```
 
 ```{r}
 dd <- fread("./Training-Data.csv")
 head(dd,n=10)
+
+```
+
+```{r}
+str(dd)
+```
+
+---
+Re-sampling
+---
+
+```{r}
+
+## Make sample dataset-1: Based on original dataset ratio
+# Get Risk_Flag original dataset ratio
+total <- length(dd$Risk_Flag)
+true <- length(dd$Risk_Flag[dd$Risk_Flag==1])
+false <- length(dd$Risk_Flag[dd$Risk_Flag==0])
+
+# Calculate dataset ratio
+true_ratio <- true/total
+false_ratio <- false/total
+# Get sample dataset size for 0 and 1
+true_smp_size <- floor(true_ratio * 20000)
+false_smp_size <- floor(false_ratio * 20000)
+# set seed
+set.seed(123)
+# Split dataset for Risk_Flag=1 and Risk_Flag=0
+true_ind <- sample(seq_len(nrow(dd[dd$Risk_Flag==1])), size = true_smp_size)
+false_ind <- sample(seq_len(nrow(dd[dd$Risk_Flag==0])), size = false_smp_size)
+# Split the data frames
+true_smp <- (dd[dd$Risk_Flag==1])[true_ind, ]
+false_smp <- (dd[dd$Risk_Flag==0])[false_ind, ]
+# Create sample dataset size
+sample1 <- rbind(false_smp, true_smp)
+# Randomize sample's order
+sample1 <- sample1[sample(nrow(sample1)),]
+
+dd <- sample1
+str(dd)
 ```
 
 ---
@@ -145,12 +196,7 @@ EDA: Profession
 
 ```{r}
 profession <- dd[, .(count = .N), by = `Profession`][order(-rank(count))]
-print(nrow(profession))
-```
-```{r}
-
 print(paste0("Disitinct Profession:", nrow(profession)))
-
 ```
 
 ```{r}
@@ -173,23 +219,18 @@ Helper Method
 
 ```{r}
 mse = function(x,y) { mean((x-y)^2)}
-
 ```
 
 ---
 Data Cleaning
 ---
 
-```{r}
-library(data.table)
-library(ggplot2)
-library(ggthemes)
-library(glmnet)
-library(dplyr)
-theme_set(theme_bw())
-```
 
 ```{r}
+
+dd$CITY <- as.data.frame(gsub("[[:punct:]]", "", as.matrix(dd$CITY)))
+dd$STATE <- as.data.frame(gsub("[[:punct:]]", "", as.matrix(dd$STATE))) 
+
 data <- dd
 
 #REMOVE unwanted ID
@@ -222,6 +263,61 @@ y_train <- y_data[train_ind]
 x_test <- x_data[-train_ind, ]
 y_test <- y_data[-train_ind]
 
+x_train_df <- as.data.frame(x_train)
+x_test_df <- as.data.frame(x_test)
+
+
+# categorical train test split
+x_rf_train <- data[train_ind, ]
+x_rf_test <- data[-train_ind]
+
+y_rf_train_sample <- x_rf_train$Risk_Flag
+y_rf_test_sample <- x_rf_test$Risk_Flag
+
+
+# Check test and train dataset
+prop.table(table(y_train))
+prop.table(table(y_test))
+
+```
+
+---
+Linear Regression
+---
+
+```{r}
+
+linear_model = lm(y_train ~. + 0 , data=x_train_df)
+
+predictions_test_linear_df <- predict(linear_model, x_test_df)
+predictions_test_linear <- as.matrix(predictions_test_linear_df)
+
+mse_test_lm1 <- mse(y_test, predictions_test_linear)
+
+print(mse_test_lm1)
+
+```
+
+---
+Ridge Regression
+---
+
+```{r}
+
+ridge_model <- cv.glmnet(x_train, y=y_train, alpha = 0, nfolds = 5)
+best_ridge_lambda <- ridge_model$lambda.min
+
+
+best_model_ridge <- glmnet(x_train, y_train, alpha = 0, lambda = best_ridge_lambda)
+#coef(best_model_ridge)
+
+predictions_train_ridge <- predict(best_model_ridge, s = best_ridge_lambda, newx = x_train)
+predictions_test_ridge <- predict(best_model_ridge, s = best_ridge_lambda, newx = x_test)
+
+mse_test_ridge = (mse(predictions_test_ridge, y_test))
+
+print(mse_test_ridge)
+
 ```
 
 ---
@@ -247,54 +343,10 @@ print(mse_test_lasso)
 ```
 
 ---
-Ridge Regression
----
-
-
-
-```{r}
-
-ridge_model <- cv.glmnet(x_train, y=y_train, alpha = 0, nfolds = 5)
-best_ridge_lambda <- ridge_model$lambda.min
-
-
-best_model_ridge <- glmnet(x_train, y_train, alpha = 0, lambda = best_ridge_lambda)
-#coef(best_model_ridge)
-
-predictions_train_ridge <- predict(best_model_ridge, s = best_ridge_lambda, newx = x_train)
-predictions_test_ridge <- predict(best_model_ridge, s = best_ridge_lambda, newx = x_test)
-
-mse_test_ridge = (mse(predictions_test_ridge, y_test))
-
-print(mse_test_ridge)
-
-```
-
----
-Linear Regression
----
-
-```{r}
-
-x_train_df <- as.data.frame(x_train)
-linear_model = lm(y_train ~. + 0 , data=x_train_df)
-
-predictions_test_linear_df <- predict(linear_model, x_test_df)
-predictions_test_linear <- as.matrix(predictions_test_linear_df)
-
-mse_test_lm1 <- mse(y_test, predictions_test_linear)
-
-print(mse.test.lm1)
-
-```
-
----
 Logistic regression
 ---
 
 ```{r}
-library(caTools)
-library(ROCR)
 
 log_model <- glm(y_train ~ ., data=x_train_df)
 
@@ -309,98 +361,75 @@ print(mse_test_log)
 ```
 
 ---
-Re-sampling
+Decision Tree
 ---
 
 ```{r}
-## Make sample dataset-1: Based on original dataset ratio
-# Get Risk_Flag original dataset ratio
-total <- length(data$Risk_Flag)
-true <- length(data$Risk_Flag[data$Risk_Flag==1])
-false <- length(data$Risk_Flag[data$Risk_Flag==0])
+# machine learning - decision tree
 
-# Calculate dataset ratio
-true_ratio <- true/total
-false_ratio <- false/total
-# Get sample dataset size for 0 and 1
-true_smp_size <- floor(true_ratio * 20000)
-false_smp_size <- floor(false_ratio * 20000)
-# set seed
-set.seed(12345)
-# Split dataset for Risk_Flag=1 and Risk_Flag=0
-true_ind <- sample(seq_len(nrow(data[data$Risk_Flag==1])), size = true_smp_size)
-false_ind <- sample(seq_len(nrow(data[data$Risk_Flag==0])), size = false_smp_size)
-# Split the data frames
-true_smp <- (data[data$Risk_Flag==1])[true_ind, ]
-false_smp <- (data[data$Risk_Flag==0])[false_ind, ]
-# Create sample dataset size
-sample1 <- rbind(false_smp, true_smp)
-# Randomize sample's order
-sample1 <- sample1[sample(nrow(sample1)),]
+tree_model <-rpart(Risk_Flag ~ ., data = x_rf_train, control=rpart.control(cp=0.003))
+yhat4.tree <- predict(tree_model, x_rf_test)
 
-## Split sample dataset to test and train
-# Split dataset
-set.seed(123)
-smp_size <- floor(0.70 * nrow(sample1))
-train_ind <- sample(1:nrow(sample1),size = smp_size)
+mse_test_dtress <- mse(y_rf_test_sample, yhat4.tree)
+print(mse_test_dtress)
 
-# Split the data frames
-risk_train <- sample1[train_ind,]
-risk_test <- sample1[-train_ind,]
-# Get sample output 
-y_train_sample <- risk_train$Risk_Flag
-y_test_sample <- risk_test$Risk_Flag
-# Check test and train dataset
-prop.table(table(risk_train$Risk_Flag))
-prop.table(table(risk_test$Risk_Flag))
+```
+
+```{r}
+rpart.plot(tree_model, type = 1)
 
 ```
 
 ---
 Random Forest
 ---
-
 ```{r}
-library(randomForest)
-library(caret)
 
-# Convert numerical variable to factor
-risk_train$Risk_Flag <- as.factor(risk_train$Risk_Flag)
-risk_test$Risk_Flag <- as.factor(risk_test$Risk_Flag)
 # Run randomForest model
-risk_rf <- randomForest(Risk_Flag ~ ., data = risk_train)
-risk_rf_pred <- predict(risk_rf, risk_test)
-# Check confusion Matrix
-confMat_rf <- confusionMatrix(risk_rf_pred,risk_test$Risk_Flag)
-confMat_rf
-# Calculate MSE for random forest
-mse.forest <- mean(((as.integer(risk_rf_pred)-1) - y_test_sample) ^ 2)
-print(mse.forest)
+risk_rf <- randomForest(Risk_Flag ~ ., data = x_rf_train, importance=TRUE)
+risk_rf_pred <- predict(risk_rf, x_rf_test)
 
+# Calculate MSE for random forest
+mse_test_forest <- mse(y_rf_test_sample, risk_rf_pred)
+print(mse_test_forest)
 
 ```
 
 ---
-Decision Tree
+Generalized Boosted Regression 
 ---
 
 ```{r}
-# machine learning - decision tree
-#install.packages(c("rpart.plot", "rpart"))
-library(rpart)
-library(rpart.plot)
 
-tree.model <-rpart(Risk_Flag~Income + Age +
-                     Experience + Marital_Status +
-                     House_Ownership + Car_Ownership +  CURRENT_JOB_YRS + Profession + CITY + STATE + CURRENT_HOUSE_YRS
-, data = risk_train,control=rpart.control(cp=0.003))
-tree.model
-summary(tree.model)
+fit.btree <- gbm(y_train ~.,
+data = x_train_df,
+distribution = "gaussian",
+n.trees = 200,
+interaction.depth = 2,
+shrinkage = 0.001)
 
-plot(tree.model,compress=TRUE)
-rpart.plot(tree.model)
-text(tree.model,pretty = 0 )
+yhat.btree <- predict(fit.btree, x_test_df, n.trees = 100)
+predictions_test_xg <- as.matrix(yhat.btree)
+
+mse_test_gbmtress <- mse(y_test , predictions_test_xg)
+print(mse_test_gbmtress)
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
