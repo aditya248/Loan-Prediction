@@ -14,14 +14,11 @@ output: html_notebook
 # Data Source
 
 
-
 # Setup
 
 ## Installing Packages
 ```{r}
-
 install.packages(c("data.table", "ggplot2", "ggthemes", "scales", "ISLR", "randomForest", "caret", "rpart.plot", "rpart", "caTools", "ROCR", "gbm","SmartEDA"))
-
 ```
 
 ## Loading Packages to Library
@@ -49,7 +46,6 @@ theme_set(theme_bw())
 ```{r}
 dd <- fread("./Training-Data.csv")
 head(dd,n=10)
-
 ```
 
 ```{r}
