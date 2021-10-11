@@ -44,18 +44,13 @@ theme_set(theme_bw())
 
 ## Loading dataset into the environment
 ```{r}
-dd <- fread("./Training-Data.csv")
-head(dd,n=10)
+data <- fread("./Training-Data.csv")
+head(data,n=10)
 ```
 
 ```{r}
-str(dd)
+str(data)
 ```
-
-```{r}
-summary(dd)
-```
-
 
 # Re-sampling
 
@@ -63,9 +58,9 @@ summary(dd)
 
 ## Make sample dataset-1: Based on original dataset ratio
 # Get Risk_Flag original dataset ratio
-total <- length(dd$Risk_Flag)
-true <- length(dd$Risk_Flag[dd$Risk_Flag==1])
-false <- length(dd$Risk_Flag[dd$Risk_Flag==0])
+total <- length(data$Risk_Flag)
+true <- length(data$Risk_Flag[data$Risk_Flag==1])
+false <- length(data$Risk_Flag[data$Risk_Flag==0])
 
 # Calculate dataset ratio
 true_ratio <- true/total
@@ -76,19 +71,40 @@ false_smp_size <- floor(false_ratio * 20000)
 # set seed
 set.seed(123)
 # Split dataset for Risk_Flag=1 and Risk_Flag=0
-true_ind <- sample(seq_len(nrow(dd[dd$Risk_Flag==1])), size = true_smp_size)
-false_ind <- sample(seq_len(nrow(dd[dd$Risk_Flag==0])), size = false_smp_size)
+true_ind <- sample(seq_len(nrow(data[data$Risk_Flag==1])), size = true_smp_size)
+false_ind <- sample(seq_len(nrow(data[data$Risk_Flag==0])), size = false_smp_size)
 # Split the data frames
-true_smp <- (dd[dd$Risk_Flag==1])[true_ind, ]
-false_smp <- (dd[dd$Risk_Flag==0])[false_ind, ]
+true_smp <- (data[data$Risk_Flag==1])[true_ind, ]
+false_smp <- (data[data$Risk_Flag==0])[false_ind, ]
 # Create sample dataset size
 sample1 <- rbind(false_smp, true_smp)
 # Randomize sample's order
 sample1 <- sample1[sample(nrow(sample1)),]
 
-dd <- sample1
-str(dd)
+data <- sample1
+str(data)
 ```
+
+
+# Data Cleaning
+
+```{r}
+
+data$CITY <- as.data.frame(gsub("[[:punct:]]", "", as.matrix(data$CITY)))
+data$STATE <- as.data.frame(gsub("[[:punct:]]", "", as.matrix(data$STATE))) 
+
+#REMOVE unwanted ID
+data$Id <- NULL
+
+#Change col names
+colnames(data)[4] <- "Marital_Status"
+
+str(data)
+```
+```{r}
+summary(data)
+```
+
 
 # Exploratory Data Analysis
 
@@ -96,21 +112,21 @@ str(dd)
 
 ```{r}
 # Overview of the data - Type = 1
-ExpData(data=dd,type=1)
+ExpData(data=data,type=1)
 
 # Structure of the data - Type = 2
-ExpData(data=dd,type=2, fun = c("mean", "median", "var"))
+ExpData(data=data,type=2, fun = c("mean", "median", "var"))
 ```
 
 ## EDA: Income
 
 ```{r}
-print(paste0("Minimum salary: ",min(dd$Income)))
-print(paste0("Maximum salary: ",max(dd$Income)))
+print(paste0("Minimum salary: ",min(data$Income)))
+print(paste0("Maximum salary: ",max(data$Income)))
 ```
 
 ```{r}
-salary_distribution <- ggplot(dd, aes(dd$Income, fill=..count..))+
+salary_distribution <- ggplot(data, aes(data$Income, fill=..count..))+
   geom_histogram(binwidth=1000000) + 
   labs(x="Income", y="Number") +
   ggtitle("Frequency Distribution of Income")
@@ -121,7 +137,7 @@ salary_distribution
 ## EDA: Age
 
 ```{r}
-age_distribution <- ggplot(dd, aes(dd$Age, fill=..count..))+
+age_distribution <- ggplot(data, aes(data$Age, fill=..count..))+
   geom_histogram(binwidth = 10,) + 
   labs(x="Age", y="Number") +
   ggtitle("Frequency Distribution of Age")+
@@ -133,7 +149,7 @@ age_distribution
 ## EDA: House Ownership
 
 ```{r}
-rented_vs_owned <- dd[, .(count = .N), by = House_Ownership]
+rented_vs_owned <- data[, .(count = .N), by = House_Ownership]
 print(rented_vs_owned)
 ```
 
@@ -159,7 +175,7 @@ ggplot(rented_vs_owned, aes (x="", y = count, fill = House_Ownership)) +
 ## EDA: Car Ownership
 
 ```{r}
-car_ownership <- dd[, .(count = .N), by = Car_Ownership]
+car_ownership <- data[, .(count = .N), by = Car_Ownership]
 print(car_ownership)
 ```
 
@@ -185,12 +201,12 @@ ggplot(car_ownership, aes (x="", y = count, fill = Car_Ownership)) +
 ## EDA: Marital Status
 
 ```{r}
-marital_status <- dd[, .(count = .N), by = `Married/Single`]
+marital_status <- data[, .(count = .N), by = `Marital_Status`]
 print(marital_status)
 ```
 
 ```{r}
-ggplot(marital_status, aes (x="", y = count, fill = `Married/Single`)) + 
+ggplot(marital_status, aes (x="", y = count, fill = `Marital_Status`)) + 
   geom_col(position = 'stack', width = 1) +
   geom_text(aes(label = paste0(round(count / sum(count) * 100), "%"), x = 1.3),
             position = position_stack(vjust = 0.5)) +
@@ -211,7 +227,7 @@ ggplot(marital_status, aes (x="", y = count, fill = `Married/Single`)) +
 ## EDA: Profession
 
 ```{r}
-profession <- dd[, .(count = .N), by = `Profession`][order(-rank(count))]
+profession <- data[, .(count = .N), by = `Profession`][order(-rank(count))]
 print(paste0("Disitinct Profession:", nrow(profession)))
 ```
 
@@ -229,19 +245,20 @@ ggplot(data=head(profession,n=10), aes(x=reorder(Profession, count), y=count)) +
 
 ```{r}
 #Cross tabulation with target variable
-ExpCTable(dd,Target="Risk_Flag",margin=1,clim=10,nlim=3,round=2,bin=NULL,per=F)
+ExpCTable(data,Target="Risk_Flag",margin=1,clim=10,nlim=3,round=2,bin=NULL,per=F)
 ```
 ```{r}
 #Distributions of Numerical variables
-plot1 <- ExpNumViz(dd,target="Risk_Flag",type=1,nlim=5,fname=NULL,col=c("darkgreen","springgreen3","springgreen1"),Page=c(2,2),sample=5)
+plot1 <- ExpNumViz(data,target="Risk_Flag",type=1,nlim=5,fname=NULL,col=c("darkgreen","springgreen3","springgreen1"),Page=c(2,2),sample=5)
 plot1[[1]]
 ```
 
 ```{r}
 #Distributions of categorical variables
-plot2 <- ExpCatViz(dd,target="Risk_Flag",fname=NULL,clim=15,col=c("slateblue4","slateblue1"),margin=2,Page = c(1,1),sample=5)
+plot2 <- ExpCatViz(data,target="Risk_Flag",fname=NULL,clim=15,col=c("slateblue4","slateblue1"),margin=2,Page = c(1,1),sample=5)
 plot2[[1]]
 ```
+# Supervised-Machine Learning Models
 
 ## Helper Method
 
@@ -249,26 +266,7 @@ plot2[[1]]
 mse = function(x,y) { mean((x-y)^2)}
 ```
 
-# Data Cleaning
-
-```{r}
-
-dd$CITY <- as.data.frame(gsub("[[:punct:]]", "", as.matrix(dd$CITY)))
-dd$STATE <- as.data.frame(gsub("[[:punct:]]", "", as.matrix(dd$STATE))) 
-
-data <- dd
-
-#REMOVE unwanted ID
-data$Id <- NULL
-
-#Change col names
-colnames(data)[4] <- "Marital_Status"
-
-str(data)
-```
-```{r}
-summary(data)
-```
+## Train-Test Split
 
 ```{r}
 
@@ -281,7 +279,7 @@ x_data <- model.matrix( ~ -1 + Income + Age +
  House_Ownership + Car_Ownership + CITY + STATE + Profession + CURRENT_JOB_YRS + CURRENT_HOUSE_YRS, data)
 
 # outcome is median house value in millions
-y_data <- dd$Risk_Flag
+y_data <- data$Risk_Flag
 
 x_train <- x_data[train_ind, ]
 y_train <- y_data[train_ind]
@@ -305,8 +303,6 @@ prop.table(table(y_train))
 prop.table(table(y_test))
 
 ```
-
-# Supervised-Machine Learning Models
 
 ## Linear Regression
 
