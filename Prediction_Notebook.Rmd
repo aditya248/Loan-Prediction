@@ -10,9 +10,13 @@ output: html_notebook
 
 # Problem Definition
 
+Build machine learning models to predict who are possible defaulters for the consumer loans product based on historic customer behavior and their background information such as income, age, professional experience, profession, whether married or single and etc.
 
 # Data Source
 
+*Dataset from Kaggle*
+Provided by Univ.AI for a Hackathon
+**Source:** https://www.kaggle.com/subhamjain/loan-prediction-based-on-customer-behavior?select=Training+Data.csv
 
 # Setup
 
