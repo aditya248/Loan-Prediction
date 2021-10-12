@@ -7,8 +7,6 @@ output: html_notebook
 
 # Executive Summary
 
-  Our team is analyzing loan prediction data based on customer behavior to see which features have an impact on predicting who would be a likely defaulter (someone who cannot repay a loan). We initially performed some EDA on the overall dataset to understand some of the trends in the behavior and in specific features. Due to the large size of our initial train and test datasets (270,000 obs.), we chose to resample them by taking 10% of the original observations (20,000 obs.) and consequently splitting those into train and test sets using a 70/30 split respectively. 
-  We then ran various machine learning models on our data to and found the one that would provide the best and most accurate predictions using the given/most important variables. 
 
 # Problem Definition
 
@@ -413,6 +411,7 @@ print(mse_test_forest)
 
 ```
 
+
 ## Generalized Boosted Regression 
 
 ```{r}
@@ -432,10 +431,28 @@ print(mse_test_gbmtress)
 
 ```
 
+
 # Conclusion
+## Compare all model MSE
+```{r}
+
+# Create the data for the chart
+MSE <- c(mse_test_forest, mse_test_ridge, mse_test_lasso, mse_test_lm1, mse_test_log, mse_test_dtress, mse_test_gbmtress)
+Model <- c("Random Forest","Ridge Regression","Lasso Regression","Linear Regression","Logistic Regression","Decision Tree", "Generalized Boosted Regression")
+
+mse.data <- data.frame(Model,MSE)
+mse.data
+
+```
 
 
+## Get important variables
+```{r}
+importance(risk_rf)
+varImpPlot(risk_rf)
 
+## Higher the value of mean decrease accuracy or mean decrease gini score , higher the importance of the variable in the model. In the plot shown above, Income is most important variable.
+```
 
 
 
